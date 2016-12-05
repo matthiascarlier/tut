@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Handler;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -15,6 +16,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -26,6 +28,9 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity {
     public final static String EXTRA_MESSAGE = "com.example.tut.MESSAGE";
     public final int MY_PERMISSIONS_REQUEST_READ_SMS = 1;
+
+    private Handler handler = new Handler();
+    private int i;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,61 +51,67 @@ public class MainActivity extends AppCompatActivity {
                 // result of the request.
         }
         else {
-            getSMS();
+            //getSMS("6505551212");
         }
     }
 
     /** Called when the user clicks the Send button */
     public void sendMessage(View view) {
-        // Do something in response to button
-        Intent intent = new Intent(this, DisplayMessageActivity.class);
         EditText editText = (EditText) findViewById(R.id.edit_message);
         String message = editText.getText().toString();
-        intent.putExtra(EXTRA_MESSAGE, message);
-        startActivity(intent);
+
+        getSMS(message);
     }
 
-    public void getSMS(){
-        Cursor cursor = getContentResolver().query(Uri.parse("content://sms/inbox"), new String [] {"address", "date", "date_sent", "body"}, null, null, null);
+    public void getSMS(final String address){
+                Cursor cursor = getContentResolver().query(Uri.parse("content://sms/inbox"), new String [] {"address", "date", "date_sent", "body"}, "address='" + address + "'", null, null);
+                //Cursor cursor = getContentResolver().query(Uri.parse("content://sms/inbox"), new String[]{"address", "date", "date_sent", "body"}, null, null, null);
 
-        String msgData = "";
-        if (cursor.moveToFirst()) { // must check the result to prevent exception
-            TableLayout table = (TableLayout) findViewById(R.id.table);
 
-            ArrayList<String> data = new ArrayList<String>();
-            data.add("address");
-            data.add("date");
-            //data.add("date_sent");
-            data.add("body");
+                String msgData = "";
+                TableLayout table = (TableLayout) findViewById(R.id.table);
+                table.removeAllViews();
+                if (cursor.moveToFirst()) { // must check the result to prevent exception
+                    ArrayList<String> data = new ArrayList<String>();
+                    data.add("address");
+                    data.add("date");
+                    //data.add("date_sent");
+                    data.add("body");
 
-            addRowToTable(table, data);
+                    addRowToTable(table, data);
 
-            msgData = "";
-            do {
+                    msgData = "";
+                    System.out.println(cursor.getCount());
+                    i = 0;
+                    ProgressBar mProgress = (ProgressBar) findViewById(R.id.progressBar);
+                    mProgress.setMax(cursor.getCount());
+                    do {
 
-                System.out.println(cursor.getString(cursor.getColumnIndex("date_sent")));
+                        mProgress.setProgress(i);
+                        System.out.println(i++);
+                        data.clear();
+                        data.add(cursor.getString(cursor.getColumnIndex("address")));
+                        data.add(DateFormat.format("dd/mm/yyyy, h:mm:ss", new Date(cursor.getLong(cursor.getColumnIndex("date")))).toString());
+                        //data.add(cursor.getString(cursor.getColumnIndex("date_sent")));
+                        data.add(cursor.getString(cursor.getColumnIndex("body")));
 
-                data.clear();
-                data.add(cursor.getString(cursor.getColumnIndex("address")));
-                data.add(DateFormat.format("dd/mm/yyyy, h:mm:ss", new Date(cursor.getLong(cursor.getColumnIndex("date")))).toString());
-                //data.add(cursor.getString(cursor.getColumnIndex("date_sent")));
-                data.add(cursor.getString(cursor.getColumnIndex("body")));
+                        //addRowToTable(table, data);
 
-                addRowToTable(table, data);
-
-                for (int idx = 0; idx < cursor.getColumnCount(); idx++) {
-                    msgData += " " + cursor.getColumnName(idx) + ":" + cursor.getString(idx);
+                        for (int idx = 0; idx < cursor.getColumnCount(); idx++) {
+                            //msgData += " " + cursor.getColumnName(idx) + "|" + cursor.getString(idx) +"\n";
+                            msgData += "" + cursor.getString(cursor.getColumnIndex(""));
+                        }
+                        // use msgData
+                    } while (cursor.moveToNext());
+                    System.out.println(msgData);
+                } else {
+                    // empty box, no SMS
+                    msgData = "empty box, no SMS";
                 }
-                    // use msgData
-            } while (cursor.moveToNext());
-        } else {
-            // empty box, no SMS
-            msgData = "empty box, no SMS";
-        }
-        System.out.println(msgData);
-        //TextView txt = (TextView) findViewById(R.id.textView2);
-        //txt.setText(msgData);
-
+                //System.out.println(msgData);
+                //TextView txt = (TextView) findViewById(R.id.textView2);
+                //txt.setText(msgData);
+        System.out.println("test!!!!!");
     }
 
     @Override
@@ -114,13 +125,9 @@ public class MainActivity extends AppCompatActivity {
 
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
+                    getSMS("6505551212");
 
-                } else {
-
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
                 }
-                return;
             }
 
             // other 'case' lines to check for other
